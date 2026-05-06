@@ -18,26 +18,21 @@ status_leds = [
 ]
 pixels = NeoPixel(Pin(NEOPIXEL), NUM_PIXELS)
 
+for led in status_leds:
+    led.value(0)
 
-def main():
-    for led in status_leds:
-        led.value(0)
-
-    for _ in range(BLINK_COUNT):
-        pixels[0] = (64, 0, 0)
-        pixels[1] = (0, 64, 0)
-        pixels[2] = (0, 0, 64)
-        pixels.write()
-        sleep(BLINK_SECONDS)
-
-        for index in range(NUM_PIXELS):
-            pixels[index] = (0, 0, 0)
-        pixels.write()
-        sleep(BLINK_SECONDS)
+for _ in range(BLINK_COUNT):
+    pixels[0] = (64, 0, 0)
+    pixels[1] = (0, 64, 0)
+    pixels[2] = (0, 0, 64)
+    pixels.write()
+    sleep(BLINK_SECONDS)
 
     for index in range(NUM_PIXELS):
         pixels[index] = (0, 0, 0)
     pixels.write()
+    sleep(BLINK_SECONDS)
 
-
-main()
+for index in range(NUM_PIXELS):
+    pixels[index] = (0, 0, 0)
+pixels.write()
