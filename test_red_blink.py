@@ -12,15 +12,13 @@ leds = [
     Pin(LED_GREEN, Pin.OUT),
 ]
 
+for _ in range(10):
+    for led in leds:
+        led.value(1)
+    sleep(1)
+    for led in leds:
+        led.value(0)
+    sleep(1)
 
-def main():
-    while True:
-        for led in leds:
-            led.value(1)
-        sleep(1)
-        for led in leds:
-            led.value(0)
-        sleep(1)
-
-
-main()
+for led in leds:
+    led.value(0)
