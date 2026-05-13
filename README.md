@@ -37,8 +37,11 @@ powershell -ExecutionPolicy Bypass -File tools\check_env.ps1
 | ESP32: 環境檢查 | 檢查開發環境是否正確 |
 | ESP32: 環境設定 (自動修復) | 自動安裝套件、驅動、韌體 |
 | ESP32: Deploy | 上傳 boot.py / main.py / lib/ |
+| ESP32: Run current MicroPython file | 掛載專案目錄並執行目前焦點的 .py（預設 `test_ir_oled.py`） |
 | ESP32: Soft reset | 軟重啟 ESP32 |
-| ESP32: Serial monitor | 開啟序列埠監控 |
+| ESP32: Serial monitor | 開啟序列埠監控（mpremote repl） |
+
+> 提示：跑任何 mpremote 指令前要確保 COM3 沒被佔用（關掉 Serial Monitor、其他 REPL 視窗）。
 
 ---
 
@@ -91,6 +94,18 @@ powershell -ExecutionPolicy Bypass -File tools/flash.ps1 -Port COM3 -Firmware .\
 ```
 
 > 提示：`tools\check_env.ps1 -Fix` 已包含自動下載 + 燒錄，建議優先使用。
+
+## IR 紅外線遙控
+
+`ir.py` 為 NEC 協定純 Python 解碼器（GPIO `33`），三種模式：
+
+- `capture_keys()`：引導使用者按下指定鍵錄製 raw code
+- `monitor_keys()`：持續解碼並印出
+- `confirm_all_keys()`：對照已知按鍵，按一次印一次（目前 `main()` 預設執行）
+
+`test_ir_oled.py` 整合 IR + OLED：按下遙控器後，OLED 會顯示按鍵名稱、raw code、address / command、累計次數。預設用 `Run current MicroPython file` task 即可跑起來。
+
+`tools/record-ir.ps1` 跑 `ir.py` 並把終端輸出 Tee 到 `ir_capture.txt`，方便事後比對波形。
 
 ## Secrets
 

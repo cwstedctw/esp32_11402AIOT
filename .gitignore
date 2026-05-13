@@ -16,6 +16,9 @@ wifi_config.py
 # Local downloads
 drivers/
 
+# IR capture logs (from tools/record-ir.ps1)
+ir_capture.txt
+
 # OS / Editor
 .DS_Store
 Thumbs.db

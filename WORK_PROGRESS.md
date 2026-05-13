@@ -1,45 +1,93 @@
 # Work Progress
 
-Date: 2026-05-06
+Date: 2026-05-13
 
-## Current ESP32 LED Test
+## Today's Work: IR Remote + OLED Display
+
+### Goal
+
+Decode an NEC infrared remote on the ESP32 and show each key press on the
+SSD1306 128x64 I2C OLED in real time.
+
+### Hardware
 
 - Board connection: `COM3`
-- Runtime: ESP32 MicroPython with `mpremote`
-- Main program: `main.py`
-- Full-color LED type: WS2812 / NeoPixel
-- NeoPixel data pin: GPIO `26`
-- NeoPixel count: `3`
+- IR receiver: GPIO `33` (pull-up enabled)
+- OLED: I2C bus 0, SDA `21`, SCL `22`, address `0x3C`
+- Remote: 17-key NEC remote (already mapped in `ir.py:KEY_BY_RAW`)
 
-## Current Behavior
+### What Was Built
 
-The ESP32 now runs an RGB blink test on boot:
+- `ir.py` — pure-Python NEC decoder. Reads raw pulses from GPIO 33, decodes
+  the 32-bit address/command frame, and exposes three entry points:
+  `capture_keys()`, `monitor_keys()`, `confirm_all_keys()`.
+- `test_ir_oled.py` — integration test. Imports `read_ir`, `decode_nec`,
+  `KEY_BY_RAW`, `RECV_PIN` from `ir.py`, initialises the OLED, and refreshes
+  the screen on every valid key press with key name, raw code, address,
+  command, and a press counter.
+- `tools/record-ir.ps1` — wraps `mpremote run ir.py` with `Tee-Object` so a
+  capture session is logged to `ir_capture.txt`.
+- `tools/run-test.ps1` — default `-File` switched from `test_led.py` to
+  `test_ir_oled.py`, so the `Run current MicroPython file` task works
+  out-of-the-box.
 
-- Pixel 1 lights red at brightness `64`
-- Pixel 2 lights green at brightness `64`
-- Pixel 3 lights blue at brightness `64`
-- LEDs stay on for `1` second
-- LEDs turn off for `1` second
-- This repeats `10` times, for about `20` seconds total
-- All NeoPixels are turned off at the end
+### Verified Behavior
 
-The normal red, yellow, and green status LEDs are turned off before the RGB test starts:
+Live on hardware (24 key presses across 1, 2, 4, 5, 6, UP, LEFT, RIGHT):
 
-- Red LED: GPIO `16`
-- Yellow LED: GPIO `12`
-- Green LED: GPIO `13`
-
-## Files Updated
-
-- `main.py`: boot program for the RGB blink test
-- `test_rgb_once.py`: direct `mpremote run` test file for the same RGB behavior
-
-## Commands Used
-
-```powershell
-.\.venv\Scripts\mpremote.exe connect COM3 run test_rgb_once.py
-.\.venv\Scripts\mpremote.exe connect COM3 cp main.py :main.py
-.\.venv\Scripts\mpremote.exe connect COM3 reset
+```
+I2C scan: ['0x3c']
+OLED ready. IR on GPIO 33
+key=2 raw=0xB946FF00 count=1
+key=UP raw=0xE718FF00 count=2
+...
+key=5 raw=0xBF40FF00 count=24
 ```
 
-Note: Global `uv` was not available in this terminal, so the project virtual environment's `mpremote.exe` was used directly.
+OLED idle screen:
+```
+IR -> OLED
+GPIO 33
+Press a key...
+```
+
+OLED after key press:
+```
+Key:  5             #24
+Raw:
+0xBF40FF00
+a=00 c=BF
+```
+
+### Debugging Notes
+
+- Initial "OLED 黑屏" symptom turned out to be `mpremote: failed to access
+  COM3 (it may be in use by another program)` — another mpremote / Serial
+  Monitor session was holding the port. Closing it unblocked everything.
+- `lib/kit_pins.py` lists `IR_RECEIVER = 35` with a "confirm before use"
+  note. The actual working pin on this expansion board is `33`. Did not
+  edit `kit_pins.py` yet to avoid breaking other potential callers.
+
+### Commands Used
+
+```powershell
+# Run the integration test (mounts project, streams device prints)
+.\.venv\Scripts\mpremote.exe connect COM3 mount . + run test_ir_oled.py
+
+# Record an IR capture session to ir_capture.txt
+powershell -ExecutionPolicy Bypass -File tools\record-ir.ps1 -Port COM3
+
+# Open REPL (Ctrl+] to exit, otherwise COM3 stays held)
+.\.venv\Scripts\mpremote.exe connect COM3 repl
+```
+
+---
+
+## Previous Work: RGB NeoPixel Blink (2026-05-06)
+
+- `main.py` runs an RGB NeoPixel blink on boot:
+  pixel 1 red, pixel 2 green, pixel 3 blue at brightness `64`,
+  1 s on / 1 s off, 10 cycles, all off at end.
+- Status LEDs (red `16`, yellow `12`, green `13`) are turned off before the
+  RGB test starts.
+- `test_rgb_once.py` reproduces the same behaviour for `mpremote run`.

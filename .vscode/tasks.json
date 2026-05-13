@@ -27,6 +27,23 @@
       "group": { "kind": "build", "isDefault": true }
     },
     {
+      "label": "ESP32: Run current MicroPython file",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "tools/run-test.ps1",
+        "-File",
+        "${relativeFile}",
+        "-Port",
+        "COM3"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
       "label": "ESP32: Soft reset",
       "type": "shell",
       "command": "uv",
