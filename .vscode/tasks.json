@@ -46,16 +46,16 @@
     {
       "label": "ESP32: Soft reset",
       "type": "shell",
-      "command": "uv",
-      "args": ["run", "mpremote", "connect", "auto", "reset"],
+      "command": "${workspaceFolder}\\.venv\\Scripts\\mpremote.exe",
+      "args": ["connect", "auto", "reset"],
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
     },
     {
       "label": "ESP32: Serial monitor",
       "type": "shell",
-      "command": "uv",
-      "args": ["run", "mpremote", "connect", "auto", "repl"],
+      "command": "${workspaceFolder}\\.venv\\Scripts\\mpremote.exe",
+      "args": ["connect", "auto", "repl"],
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
     }

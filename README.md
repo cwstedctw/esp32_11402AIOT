@@ -17,7 +17,7 @@ powershell -ExecutionPolicy Bypass -File tools\check_env.ps1 -Fix
 ```
 
 這個指令會自動：
-- 檢查 Python（3.10+）+ uv 是否安裝
+- 檢查 Python（3.11+）+ uv 是否安裝
 - 用 `uv sync` 安裝套件（mpremote, esptool）
 - 偵測並自動安裝 USB 驅動（CP210x / CH340 / FTDI）
 - 偵測 ESP32 COM port（多板子智慧選擇）

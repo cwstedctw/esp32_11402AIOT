@@ -16,6 +16,7 @@ param(
 )
 
 $ErrorActionPreference = 'SilentlyContinue'
+$projectRoot = Split-Path -Parent $PSScriptRoot
 
 # --- 結果追蹤 ---
 $results = @()
@@ -202,12 +203,20 @@ Write-Host "[1/6] 檢查 Python ..." -ForegroundColor Yellow
 $pythonCmd = $null
 $pythonVer = $null
 
-# Try python first, then python3
-foreach ($cmd in @("python", "python3")) {
+$pythonCandidates = @()
+$venvPython = Join-Path $projectRoot ".venv\Scripts\python.exe"
+if (Test-Path $venvPython) {
+    $pythonCandidates += @{ Cmd = $venvPython; Label = ".venv Python" }
+}
+$pythonCandidates += @{ Cmd = "python"; Label = "python" }
+$pythonCandidates += @{ Cmd = "python3"; Label = "python3" }
+
+# Prefer the project virtualenv, then fall back to PATH.
+foreach ($candidate in $pythonCandidates) {
     try {
-        $ver = & $cmd --version 2>&1
+        $ver = & $candidate.Cmd --version 2>&1
         if ($ver -match "Python (\d+\.\d+\.\d+)") {
-            $pythonCmd = $cmd
+            $pythonCmd = $candidate.Label
             $pythonVer = $Matches[1]
             break
         }
@@ -216,17 +225,17 @@ foreach ($cmd in @("python", "python3")) {
 
 if ($pythonCmd) {
     $major, $minor, $patch = $pythonVer -split '\.'
-    if ([int]$major -ge 3 -and [int]$minor -ge 10) {
-        Write-Host "  OK: Python $pythonVer" -ForegroundColor Green
-        Add-Result "Python" $true "Python $pythonVer"
+    if ([int]$major -gt 3 -or ([int]$major -eq 3 -and [int]$minor -ge 11)) {
+        Write-Host "  OK: Python $pythonVer ($pythonCmd)" -ForegroundColor Green
+        Add-Result "Python" $true "Python $pythonVer ($pythonCmd)"
     } else {
-        Write-Host "  !! Python $pythonVer 版本太舊，需要 3.10 以上" -ForegroundColor Red
+        Write-Host "  !! Python $pythonVer 版本太舊，需要 3.11 以上" -ForegroundColor Red
         Write-Host "     下載: https://www.python.org/downloads/" -ForegroundColor Gray
         Add-Result "Python" $false "版本太舊 ($pythonVer)"
     }
 } else {
     Write-Host "  !! 找不到 Python" -ForegroundColor Red
-    Write-Host "     請安裝 Python 3.10+: https://www.python.org/downloads/" -ForegroundColor Gray
+    Write-Host "     請安裝 Python 3.11+: https://www.python.org/downloads/" -ForegroundColor Gray
     Write-Host "     安裝時請勾選 'Add Python to PATH'" -ForegroundColor Gray
     Add-Result "Python" $false "未安裝"
 }
@@ -237,9 +246,22 @@ if ($pythonCmd) {
 Write-Host ""
 Write-Host "[2/6] 檢查 uv ..." -ForegroundColor Yellow
 
+$uvCmd = $null
 $uvVer = $null
 try {
-    $uvOut = & uv --version 2>&1
+    $uvPathCmd = Get-Command uv -ErrorAction SilentlyContinue
+    if ($uvPathCmd) {
+        $uvCmd = $uvPathCmd.Source
+    } else {
+        $localUv = Join-Path $env:USERPROFILE ".local\bin\uv.exe"
+        if (Test-Path $localUv) {
+            $uvCmd = $localUv
+        }
+    }
+
+    if ($uvCmd) {
+        $uvOut = & $uvCmd --version 2>&1
+    }
     if ($uvOut -match "uv (\S+)") {
         $uvVer = $Matches[1]
     }
@@ -279,8 +301,6 @@ Write-Host "[3/6] 檢查套件 (mpremote, esptool) ..." -ForegroundColor Yellow
 
 $packagesOK = $false
 
-$projectRoot = Split-Path -Parent $PSScriptRoot
-
 if ($uvVer) {
     # Check if pyproject.toml exists
     $pyprojectPath = Join-Path $projectRoot "pyproject.toml"
@@ -289,10 +309,10 @@ if ($uvVer) {
         $venvRoot = Join-Path $projectRoot ".venv"
 
         if ($Fix -or !(Test-Path $venvRoot)) {
-            Write-Host "  -> 執行 uv sync ..." -ForegroundColor Cyan
-            Push-Location $projectRoot
-            & uv sync 2>&1 | Out-Null
-            Pop-Location
+        Write-Host "  -> 執行 uv sync ..." -ForegroundColor Cyan
+        Push-Location $projectRoot
+            & $uvCmd sync 2>&1 | Out-Null
+        Pop-Location
         }
 
         # Verify tools exist
@@ -306,7 +326,7 @@ if ($uvVer) {
         } else {
             Write-Host "  !! 套件不完整，執行 uv sync 修復" -ForegroundColor Red
             Push-Location $projectRoot
-            & uv sync 2>&1
+            & $uvCmd sync 2>&1
             Pop-Location
             # Re-check
             $hasMpremote = Test-Path (Join-Path $venvDir "mpremote.exe")
